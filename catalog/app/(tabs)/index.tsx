@@ -1,98 +1,172 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  FlatList,
+  StyleSheet,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+};
 
-export default function HomeScreen() {
+const PRODUCTS: Product[] = [
+  { id: "p1", name: "Audífonos Bluetooth", price: 89900, image: "https://picsum.photos/seed/p1/300/300" },
+  { id: "p2", name: "Mouse Inalámbrico", price: 45000, image: "https://picsum.photos/seed/p2/300/300" },
+  { id: "p3", name: "Teclado Mecánico", price: 150000, image: "https://picsum.photos/seed/p3/300/300" },
+  { id: "p4", name: "Monitor 24''", price: 620000, image: "https://picsum.photos/seed/p4/300/300" },
+  { id: "p5", name: "Cámara Web HD", price: 98000, image: "https://picsum.photos/seed/p5/300/300" },
+  { id: "p6", name: "Parlante Portátil", price: 76000, image: "https://picsum.photos/seed/p6/300/300" },
+  { id: "p7", name: "Cargador Rápido", price: 39000, image: "https://picsum.photos/seed/p7/300/300" },
+  { id: "p8", name: "Mochila para Laptop", price: 120000, image: "https://picsum.photos/seed/p8/300/300" },
+  { id: "p9", name: "Silla Ergonómica", price: 450000, image: "https://picsum.photos/seed/p9/300/300" },
+];
+
+type ProductCardProps = {
+  product: Product;
+  likes: number;
+  onLike: (id: string) => void;
+};
+
+const ProductCard = React.memo(function ProductCard({
+  product,
+  likes,
+  onLike,
+}: ProductCardProps) {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.card}>
+      <Image source={{ uri: product.image }} style={styles.image} />
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <View style={styles.info}>
+        <Text style={styles.name}>{product.name}</Text>
+        <Text style={styles.price}>
+          ${product.price.toLocaleString("es-CO")}
+        </Text>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.likeButton,
+            pressed && styles.likeButtonPressed,
+          ]}
+          onPress={() => onLike(product.id)}
+        >
+          <Text style={styles.likeText}>❤️ {likes}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+});
+
+export default function ProductList() {
+  const [likes, setLikes] = useState<Record<string, number>>({});
+
+  // useCallback: evita que handleLike sea una función nueva en cada render
+  const handleLike = useCallback((id: string) => {
+    setLikes((prev) => ({
+      ...prev,
+      [id]: (prev[id] ?? 0) + 1,
+    }));
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Product }) => (
+      <ProductCard
+        product={item}
+        likes={likes[item.id] ?? 0}
+        onLike={handleLike}
+      />
+    ),
+    [likes, handleLike]
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Catálogo de Productos</Text>
+
+      <FlatList
+        data={PRODUCTS}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={true}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
   },
-  stepContainer: {
-    gap: 8,
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginVertical: 16,
+    color: "#222",
+  },
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 14,
+    padding: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  image: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    backgroundColor: "#eee",
+  },
+  info: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: "center",
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#222",
+  },
+  price: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 4,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  likeButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#ffe4e6",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  likeButtonPressed: {
+    opacity: 0.6,
+  },
+  likeText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#e11d48",
   },
 });
